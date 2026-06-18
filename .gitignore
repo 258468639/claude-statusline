@@ -1,0 +1,8 @@
+# local development cruft
+*.tmp
+*.bak
+.DS_Store
+
+# cache files generated while testing the script
+.deps-warned
+usage_cache.json
