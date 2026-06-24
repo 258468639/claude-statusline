@@ -45,9 +45,38 @@ dim="\033[2m"; reset="\033[0m"
 green="\033[92m"; cyan="\033[96m"; blue="\033[94m"
 purple="\033[95m"; red="\033[91m"; yellow="\033[93m"; orange="\033[38;5;208m"
 
-# --- Parse Claude Code input JSON ---
 model_id=$(echo "$input" | jq -r '.model.id // .model.name // "?"' 2>/dev/null)
-model="${model_id}"
+
+# --- Resolve custom model name from ANTHROPIC_DEFAULT_*_MODEL_NAME env vars ---
+custom_model=""
+case "$model_id" in
+    *sonnet*)
+        custom_model="${ANTHROPIC_DEFAULT_SONNET_MODEL_NAME:-}"
+        ;;
+    *opus*)
+        custom_model="${ANTHROPIC_DEFAULT_OPUS_MODEL_NAME:-}"
+        ;;
+    *haiku*)
+        custom_model="${ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME:-}"
+        ;;
+    *image*)
+        custom_model="${ANTHROPIC_DEFAULT_IMAGE_MODEL_NAME:-}"
+        ;;
+    *flash*)
+        custom_model="${ANTHROPIC_DEFAULT_FLASH_MODEL_NAME:-}"
+        ;;
+    *thinking*)
+        custom_model="${ANTHROPIC_DEFAULT_THINKING_MODEL_NAME:-}"
+        ;;
+    *dev*)
+        custom_model="${ANTHROPIC_DEFAULT_DEV_MODEL_NAME:-}"
+        ;;
+    *st*)
+        custom_model="${ANTHROPIC_DEFAULT_ST_MODEL_NAME:-}"
+        ;;
+esac
+# Fall back to model_id if no custom name found
+model="${custom_model:-$model_id}"
 
 pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0 | tonumber' 2>/dev/null)
 in_tok=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0' 2>/dev/null)
