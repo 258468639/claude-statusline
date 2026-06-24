@@ -32,11 +32,11 @@ lang="${CLAUDE_STATUSLINE_LANG:-zh}"
 case "$lang" in
     en)
         L_PROJ="Proj"; L_SIZE="Size"; L_MODEL="Model"; L_MSGS="Msgs"
-        L_CTX="Free"; L_IN="in"; L_OUT="out"; L_TIME="Time"; L_NOGIT="no-git"
+        L_CTX="Ctx"; L_IN="in"; L_OUT="out"; L_TIME="Time"; L_NOGIT="no-git"
         ;;
     *)
         L_PROJ="项目"; L_SIZE="大小"; L_MODEL="模型"; L_MSGS="消息"
-        L_CTX="可用"; L_IN="输入"; L_OUT="输出"; L_TIME="时长"; L_NOGIT="无 git"
+        L_CTX="上下文"; L_IN="输入"; L_OUT="输出"; L_TIME="时长"; L_NOGIT="无 git"
         ;;
 esac
 
@@ -46,32 +46,29 @@ green="\033[92m"; cyan="\033[96m"; blue="\033[94m"
 purple="\033[95m"; red="\033[91m"; yellow="\033[93m"; orange="\033[38;5;208m"
 
 # --- Parse Claude Code input JSON ---
-model_id=$(echo "$input" | jq -r '.model.id // .model.name // .model.display_name // "?"' 2>/dev/null)
-model_display=$(echo "$input" | jq -r '.model.display_name // empty' 2>/dev/null)
-
-# --- Optional model alias mapping (~/.config/claude-statusline/models.conf) ---
-# Format: one mapping per line, "model_id = alias", comments with #
-# Example:
-#   claude-opus-4-8   = glm-5.1
-#   claude-sonnet-4-6 = DeepSeek-V4
-model="${model_display:-$model_id}"
-if [ -f "$models_conf" ] && [ -n "$model_id" ]; then
-    alias=$(awk -F= -v key="$model_id" '
-        /^[[:space:]]*#/ { next }
-        /^[[:space:]]*$/ { next }
-        {
-            k=$1; sub(/^[[:space:]]+/,"",k); sub(/[[:space:]]+$/,"",k)
-            v=$2; sub(/^[[:space:]]+/,"",v); sub(/[[:space:]]+$/,"",v)
-            if (k==key) { print v; exit }
-        }' "$models_conf" 2>/dev/null)
-    [ -n "$alias" ] && model="$alias"
-fi
+model_id=$(echo "$input" | jq -r '.model.id // .model.name // "?"' 2>/dev/null)
+model="${model_id}"
 
 pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0 | tonumber' 2>/dev/null)
 in_tok=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0' 2>/dev/null)
 out_tok=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0' 2>/dev/null)
 dur_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // 0' 2>/dev/null)
 dur_h=$(echo "scale=2; ${dur_ms:-0}/3600000" | bc -l 2>/dev/null | xargs printf "%.1f" 2>/dev/null)
+
+# --- Context window total tokens with unit conversion ---
+total_tok=$(( ${in_tok:-0} + ${out_tok:-0} ))
+if [ "$total_tok" -ge 1048576 ]; then
+    ctx_unit="M"
+    ctx_val=$(echo "scale=1; $total_tok/1048576" | bc -l 2>/dev/null | xargs printf "%.1f" 2>/dev/null)
+    [ -z "$ctx_val" ] && ctx_val="0.0"
+elif [ "$total_tok" -ge 1024 ]; then
+    ctx_unit="K"
+    ctx_val=$(echo "scale=1; $total_tok/1024" | bc -l 2>/dev/null | xargs printf "%.1f" 2>/dev/null)
+    [ -z "$ctx_val" ] && ctx_val="0.0"
+else
+    ctx_unit=""
+    ctx_val="$total_tok"
+fi
 [ -z "$dur_h" ] && dur_h="0.0"
 
 # --- Project name ---
@@ -159,4 +156,4 @@ fi
 dirty_mark=""; [ "$is_dirty" = "true" ] && dirty_mark="*"
 
 # --- Render ---
-echo -e "${purple}${L_PROJ}: ${proj_name}${size_str}${reset} ${dim}|${reset} ${blue}${L_MODEL}: ${model}${reset} ${dim}|${reset} ${green}${L_MSGS}: ${msg_count}${reset} ${dim}|${reset} ${bar_color}${L_CTX}: ${bar} ${int_pct}%${reset} ${dim}|${reset} ${cyan}🌿 ${branch}${yellow}${dirty_mark}${reset} ${dim}|${reset} ${green}${L_IN}: ${in_tok} ${L_OUT}: ${out_tok}${reset} ${dim}|${reset} ${red}${L_TIME}: ${dur_h}h${reset}"
+echo -e "${purple}${L_PROJ}: ${proj_name}${size_str}${reset} ${dim}|${reset} ${blue}${L_MODEL}: ${model}${reset} ${dim}|${reset} ${bar_color}${L_CTX}: ${bar} ${ctx_val}${ctx_unit} (${int_pct}%)${reset} ${dim}|${reset} ${cyan}🌿 ${branch}${yellow}${dirty_mark}${reset} ${dim}|${reset} ${green}${L_IN}: ${in_tok} ${L_OUT}: ${out_tok}${reset} ${dim}|${reset} ${red}${L_TIME}: ${dur_h}h${reset}"
