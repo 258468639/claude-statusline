@@ -43,6 +43,19 @@ curl -fsSL https://raw.githubusercontent.com/258468639/claude-statusline/main/in
 
 安装完成后**重启 Claude Code** 或开启新会话即可看到状态栏。
 
+### 使用 Skill 安装启用（推荐）
+
+本项目自带 `start-statusline` skill，可以自动诊断和修复状态栏配置问题：
+
+```bash
+# 1. 将 skills 目录放到 ~/.claude/skills/ 下
+ln -s $(pwd)/skills ~/.claude/skills
+
+# 2. 在 Claude Code 中输入 /start-statusline 即可自动检测并修复
+```
+
+Skill 会自动检查 `statusLine` 配置和脚本是否存在，如果缺失会自动修复。详见 `skills/start-statusline/SKILL.md`。
+
 ### 手动安装
 
 ```bash
@@ -140,6 +153,19 @@ curl -fsSL https://raw.githubusercontent.com/258468639/claude-statusline/main/in
 The installer downloads `statusline.sh`, backs up `~/.claude/settings.json` to `.bak`, then merges a `statusLine` entry — your other settings are preserved.
 
 Restart Claude Code afterwards.
+
+### Install & Enable via Skill (Recommended)
+
+The project ships with a `start-statusline` skill that auto-detects and repairs statusline config:
+
+```bash
+# 1. Link the skills directory
+ln -s $(pwd)/skills ~/.claude/skills
+
+# 2. In Claude Code, type /start-statusline to diagnose and fix
+```
+
+The skill checks whether `statusLine` config and the script exist, and repairs if missing. See `skills/start-statusline/SKILL.md` for details.
 
 ### Manual install
 
